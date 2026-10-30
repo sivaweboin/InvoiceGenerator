@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { proformaPartyTextLines } from "../../lib/proforma-party-text";
 import type { Business, Invoice } from "../../lib/invoice-types";
 import {
   calculateInvoiceTotals,
@@ -26,17 +27,27 @@ export default function ProformaInvoicePreview({
       <h2 className="proforma-title">PROFORMA INVOICE</h2>
       <div className="proforma-parties">
         <section>
-          <h3>{business.name}</h3>
-          <p>{business.address}</p>
+          <h3>
+            {proformaPartyTextLines(business.name.toUpperCase()).join("\n")}
+          </h3>
+          <p>{proformaPartyTextLines(business.address).join("\n")}</p>
           {business.gst.trim() && (
             <p>
               <b>GST Number:</b> {business.gst}
             </p>
           )}
         </section>
-        <section className={invoice.gst.trim() ? "client-with-gst" : ""}>
-          <h3>{invoice.customer || "Customer name"}</h3>
-          <p>{invoice.address || "Customer address"}</p>
+        <section className="proforma-client">
+          <h3>
+            {proformaPartyTextLines(
+              (invoice.customer || "Customer name").toUpperCase(),
+            ).join("\n")}
+          </h3>
+          <p>
+            {proformaPartyTextLines(invoice.address || "Customer address").join(
+              "\n",
+            )}
+          </p>
           {invoice.gst.trim() && (
             <p>
               <b>GST Number:</b> {invoice.gst}

@@ -41,6 +41,17 @@ const fixture = (type) => ({
   ],
 });
 
+test("short client names retain readable address and GST space on one PDF page", () => {
+  for (const customer of ["A", "AB", "Example Customer"]) {
+    const doc = createProformaPdf(
+      { ...fixture("proforma"), customer },
+      business,
+    );
+    assert.equal(doc.getNumberOfPages(), 1);
+    assert.ok(doc.output().includes("33ABCDE1234F1Z5"));
+  }
+});
+
 test("PDF filenames distinguish type and sanitize unsafe customer/number characters", () => {
   const invoice = { ...fixture("tax"), customer: "A/B:*? Ltd" };
   const tax = taxInvoiceFilename(invoice);

@@ -46,9 +46,29 @@ export default function Login() {
           </div>
         </div>
       </div>
-      <section className="login-card">
-        <h1>Weboin Invoice</h1>
-        <p>Log in to your invoice workspace.</p>
+      <section className="login-card" aria-labelledby="login-heading">
+        <div className="login-brand">
+          WEBOIN <span>INVOICE WORKSPACE</span>
+        </div>
+        <div className="login-heading-row">
+          <div className="login-emblem" aria-hidden="true">
+            <svg
+              width="26"
+              height="26"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="5" y="10" width="14" height="11" rx="3" />
+              <path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" />
+            </svg>
+          </div>
+          <h1 id="login-heading">Login to continue</h1>
+        </div>
+
         <form
           onSubmit={async (event) => {
             event.preventDefault();
@@ -105,7 +125,7 @@ export default function Login() {
             </p>
           )}
           <button className="button primary" disabled={pending}>
-            {pending ? "Logging in…" : "Log in"}
+            {pending ? "Logging in…" : "Log in to workspace →"}
           </button>
         </form>
       </section>

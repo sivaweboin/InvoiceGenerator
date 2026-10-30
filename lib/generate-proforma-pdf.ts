@@ -1,4 +1,5 @@
 import { createPdfDocument, invoiceFilename } from "./pdf-document";
+import { proformaPartyTextLines } from "./proforma-party-text";
 import {
   calculateInvoiceTotals,
   calculateLineGross,
@@ -37,10 +38,11 @@ export function createProformaPdf(
     size = 10,
     bold = false,
     align: "left" | "right" | "center" = "left",
+    color = NAVY,
   ) => {
     doc.setFont(fontFamily, bold ? "bold" : "normal");
     doc.setFontSize(size);
-    doc.setTextColor(NAVY);
+    doc.setTextColor(color);
     doc.text(value, x, y, { align });
   };
   const rule = (y: number) => {
@@ -97,7 +99,7 @@ export function createProformaPdf(
     doc.setFont(fontFamily, "bold");
     doc.setFontSize(9);
     const nameLines: string[] = doc.splitTextToSize(
-      (name || " ").toUpperCase(),
+      proformaPartyTextLines((name || " ").toUpperCase()).join("\n"),
       width,
     );
     nameLines.forEach((line, index) => text(line, x, 70 + index * 5, 9, true));
@@ -105,18 +107,23 @@ export function createProformaPdf(
   };
   doc.setFont(fontFamily, "normal");
   doc.setFontSize(8);
-  const businessLines: string[] = doc.splitTextToSize(business.address, 78);
-  const customerName = invoice.customer || "Customer name";
+  const businessLines: string[] = doc.splitTextToSize(
+    proformaPartyTextLines(business.address).join("\n"),
+    78,
+  );
+  const customerName = proformaPartyTextLines(
+    (invoice.customer || "Customer name").toUpperCase(),
+  ).join("\n");
   doc.setFont(fontFamily, "bold");
-  doc.setFontSize(8);
-  const gstWidth = invoice.gst.trim()
-    ? doc.getTextWidth(`GST Number: ${invoice.gst}`)
-    : 69;
-  const customerWidth = Math.min(69, Math.max(1, gstWidth));
-  const customerX = 202 - customerWidth;
+  doc.setFontSize(9);
+  // Reserve a readable column even when the client has a very short name.
+  const customerWidth = 61;
+  // Match the company block's 10 mm inset on the opposite page edge.
+  const customerX = 200 - customerWidth;
   doc.setFont(fontFamily, "normal");
+  doc.setFontSize(8);
   const customerLines: string[] = doc.splitTextToSize(
-    invoice.address || " ",
+    proformaPartyTextLines(invoice.address || " ").join("\n"),
     customerWidth,
   );
   const addressY = Math.max(
@@ -133,8 +140,13 @@ export function createProformaPdf(
     addressY + Math.max(3, businessLines.length, customerLines.length) * 5;
   if (business.gst.trim())
     text(`GST Number: ${business.gst}`, 10, gstY, 8, true);
-  if (invoice.gst.trim())
-    text(`GST Number: ${invoice.gst}`, customerX, gstY, 8, true);
+  doc.setFont(fontFamily, "bold");
+  const customerGstLines: string[] = invoice.gst.trim()
+    ? doc.splitTextToSize(`GST Number: ${invoice.gst}`, customerWidth)
+    : [];
+  customerGstLines.forEach((line, index) =>
+    text(line, customerX, gstY + index * 5, 8, true),
+  );
 
   const columns = [8, 91, 128, 155, 176, 202];
   const centers = [49.5, 109.5, 141.5, 165.5, 189];
@@ -148,7 +160,9 @@ export function createProformaPdf(
     rule(y + 7);
     return y + 7;
   };
-  let y = drawTableHeader(gstY + 10);
+  let y = drawTableHeader(
+    gstY + Math.max(0, customerGstLines.length - 1) * 5 + 18,
+  );
   const addPage = () => {
     footer();
     doc.addPage();
@@ -252,7 +266,7 @@ export function createProformaPdf(
   y = Math.max(y + 8, doc.getNumberOfPages() === 1 ? 225 : y + 8);
   if (y > 255) addPage();
   text("NOTE -", 8, y, 9, true);
-  text("Amounts in INR", 195, y, 9, true, "right");
+  text("Amounts in INR", 195, y, 9, true, "right", "#77738f");
   y += 6;
   doc.setFont(fontFamily, "normal");
   doc.setFontSize(9);

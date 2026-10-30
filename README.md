@@ -9,7 +9,7 @@ npm ci
 npm run dev
 ```
 
-Open http://localhost:3000. Use Business & bank to enter business details and upload an optional PNG/JPG signature. Customer GSTIN is optional; when provided, its format is checked. The app does not verify GST registration with an external service.
+Open http://localhost:3000 or any other port (based on your system settings). Use Business & bank to enter business details and upload an optional PNG/JPG signature. Customer GSTIN is optional; when provided, its format is checked. The app does not verify GST registration with an external service.
 
 ```sh
 npm test
@@ -57,8 +57,8 @@ For the optional browser workflow check, start the app and run `node tests/brows
 
 ## Single-account login
 
-Copy .env.example to .env.local and set AUTH_PASSWORD to a unique, strong password. Set AUTH_JWT_SECRET to a random secret of at least 32 characters (generate one with Node crypto.randomBytes(32).toString("hex")). The default login ID is invoice@weboin.com. Set the same variables in your hosting environment and use HTTPS in production. Never use NEXT_PUBLIC_ for these settings or commit .env.local. Missing settings disable login.
+Copy `.env.example` to `.env.local` and configure the required authentication settings privately. Set `AUTH_PASSWORD` to a unique, strong password and `AUTH_JWT_SECRET` to a random secret of at least 32 characters. Obtain the login ID privately from the administrator. Configure the same environment variables in your hosting environment and use HTTPS in production. Never prefix these settings with `NEXT_PUBLIC_` or commit `.env.local`. Missing settings disable login.
 
-Sessions use HS256 JWTs in an HTTP-only, SameSite=Strict cookie, have no JWT expiry, and use Secure cookies in production. The persistent cookie lasts up to 400 days (browsers may shorten or clear it). Sign out removes the browser session; rotating AUTH_JWT_SECRET invalidates all sessions. Login attempts are limited to ten failures per fifteen minutes per server process; use gateway/shared rate limiting for deployments with multiple instances.
+Keep login credentials, secret values, personal contact information, bank account details, signature images, and real invoice or backup data out of this README and other committed documentation. Use fictional placeholders in examples. For deployments with multiple instances, configure shared login rate limiting.
 
 Invoices remain in browser localStorage. Login gates app access but does not encrypt locally saved data or share it between devices. Signing out preserves invoices on that device. Anyone with access to the browser profile can inspect its local storage.
