@@ -1,8 +1,5 @@
 import Field from "./Field";
-import {
-  calculateLineTotal,
-  calculateLineDiscount,
-} from "../../lib/invoice-calculations";
+import { calculateLineTotal } from "../../lib/invoice-calculations";
 import { money, createItem } from "../../lib/invoice-model";
 import type { Invoice, Item } from "../../lib/invoice-types";
 import type { Dispatch, SetStateAction } from "react";
@@ -148,18 +145,13 @@ export default function InvoiceForm({
             {showDiscounts && (
               <div className="fields two discount-row">
                 <Field
-                  label="Discount (%)"
+                  label="Discount (₹)"
                   type="number"
                   min="0"
-                  max="100"
                   step="0.01"
                   value={item.discount}
                   onChange={(v) => updateItem(item.id, "discount", v)}
                 />
-                <div className="discount-hint">
-                  Discount amount:{" "}
-                  {money(calculateLineDiscount(item, invoice.documentType))}
-                </div>
               </div>
             )}
             <div className="line-total">

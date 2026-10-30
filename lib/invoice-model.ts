@@ -35,6 +35,7 @@ export const createItem = (): Item => ({
   price: "",
   quantity: "1",
   discount: "0",
+  discountMode: "amount",
 });
 export const createInvoice = (
   number = `001/${today().slice(0, 4)}`,
@@ -85,7 +86,23 @@ export function normalizeInvoice(value: unknown): Invoice {
       sac: string(item.sac),
       price: string(item.price),
       quantity: string(item.quantity),
-      discount: string(item.discount, "0"),
+      discount:
+        item.discountMode === "amount"
+          ? string(item.discount, "0")
+          : String(
+              Math.round(
+                ((Math.max(0, Number(item.price) || 0) *
+                  Math.max(0, Number(item.quantity) || 0) *
+                  Math.min(
+                    100,
+                    Math.max(0, Number(string(item.discount, "0")) || 0),
+                  )) /
+                  100 +
+                  Number.EPSILON) *
+                  100,
+              ) / 100,
+            ),
+      discountMode: "amount" as const,
     };
   });
   return {

@@ -21,7 +21,8 @@ const valid = (type = "tax") => ({
       sac: "998313",
       price: "10000",
       quantity: "2",
-      discount: "10",
+      discount: "2000",
+      discountMode: "amount",
     },
   ],
 });
@@ -36,6 +37,26 @@ test("proforma discounts apply before tax", () => {
   assert.equal(t.subtotal, 18000);
   assert.equal(t.discountTotal, 2000);
   assert.equal(t.total, 21240);
+});
+test("legacy percentage discounts migrate to fixed amounts without changing totals", () => {
+  const invoice = valid("proforma");
+  invoice.items[0].discount = "10";
+  delete invoice.items[0].discountMode;
+  const raw = JSON.stringify({
+    version: 1,
+    invoice,
+    business: defaultBusiness,
+    history: [{ id: "saved", invoice, business: defaultBusiness }],
+  });
+  const migrated = parseWorkspace(raw);
+  for (const item of [migrated.invoice, migrated.history[0].invoice]) {
+    assert.equal(item.items[0].discount, "2000");
+    assert.equal(calculateInvoiceTotals(item).total, 21240);
+  }
+  assert.equal(
+    parseWorkspace(JSON.stringify(migrated)).invoice.items[0].discount,
+    "2000",
+  );
 });
 test("IGST and no-tax calculations", () => {
   assert.equal(
@@ -68,7 +89,7 @@ test("reject invalid fields before saving or exporting", () => {
     ["price", "NaN"],
     ["price", "-1"],
     ["quantity", "0"],
-    ["discount", "101"],
+    ["discount", "20001"],
   ]) {
     const i = valid("proforma");
     i.items[0][key] = value;

@@ -19,6 +19,7 @@ export type Item = {
   price: string;
   quantity: string;
   discount: string;
+  discountMode: "amount";
 };
 export type Invoice = {
   documentType: "tax" | "proforma";

@@ -19,7 +19,7 @@ export function calculateLineDiscount(
 ) {
   if (documentType !== "proforma") return 0;
   return roundCurrency(
-    (calculateLineGross(item) * number(item.discount, 100)) / 100,
+    Math.min(calculateLineGross(item), number(item.discount)),
   );
 }
 

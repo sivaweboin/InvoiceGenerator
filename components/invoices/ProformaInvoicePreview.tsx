@@ -34,7 +34,7 @@ export default function ProformaInvoicePreview({
             </p>
           )}
         </section>
-        <section>
+        <section className={invoice.gst.trim() ? "client-with-gst" : ""}>
           <h3>{invoice.customer || "Customer name"}</h3>
           <p>{invoice.address || "Customer address"}</p>
           {invoice.gst.trim() && (

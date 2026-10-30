@@ -93,41 +93,48 @@ export function createProformaPdf(
     }
   };
   pageHeader();
-  const companyBlock = (x: number, name: string) => {
+  const companyBlock = (x: number, name: string, width = 78) => {
     doc.setFont(fontFamily, "bold");
     doc.setFontSize(9);
     const nameLines: string[] = doc.splitTextToSize(
       (name || " ").toUpperCase(),
-      x > 100 ? 69 : 78,
+      width,
     );
-    nameLines.forEach((line, index) =>
-      text(line, x, 70 + index * 5, 9, true, x > 100 ? "right" : "left"),
-    );
+    nameLines.forEach((line, index) => text(line, x, 70 + index * 5, 9, true));
     return 70 + nameLines.length * 5;
   };
   doc.setFont(fontFamily, "normal");
   doc.setFontSize(8);
   const businessLines: string[] = doc.splitTextToSize(business.address, 78);
+  const customerName = invoice.customer || "Customer name";
+  doc.setFont(fontFamily, "bold");
+  doc.setFontSize(8);
+  const gstWidth = invoice.gst.trim()
+    ? doc.getTextWidth(`GST Number: ${invoice.gst}`)
+    : 69;
+  const customerWidth = Math.min(69, Math.max(1, gstWidth));
+  const customerX = 202 - customerWidth;
+  doc.setFont(fontFamily, "normal");
   const customerLines: string[] = doc.splitTextToSize(
     invoice.address || " ",
-    69,
+    customerWidth,
   );
   const addressY = Math.max(
     companyBlock(10, business.name),
-    companyBlock(202, invoice.customer || "Customer name"),
+    companyBlock(customerX, customerName, customerWidth),
   );
   businessLines.forEach((line, index) =>
     text(line, 10, addressY + index * 5, 8),
   );
   customerLines.forEach((line, index) =>
-    text(line, 202, addressY + index * 5, 8, false, "right"),
+    text(line, customerX, addressY + index * 5, 8),
   );
   const gstY =
     addressY + Math.max(3, businessLines.length, customerLines.length) * 5;
   if (business.gst.trim())
     text(`GST Number: ${business.gst}`, 10, gstY, 8, true);
   if (invoice.gst.trim())
-    text(`GST Number: ${invoice.gst}`, 202, gstY, 8, true, "right");
+    text(`GST Number: ${invoice.gst}`, customerX, gstY, 8, true);
 
   const columns = [8, 91, 128, 155, 176, 202];
   const centers = [49.5, 109.5, 141.5, 165.5, 189];

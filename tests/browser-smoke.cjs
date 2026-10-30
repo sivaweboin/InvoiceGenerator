@@ -98,7 +98,7 @@ const fs = require("node:fs/promises");
     );
     await page.getByLabel("Document type").selectOption("proforma");
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.getByLabel("Discount (%)").fill("10");
+    await page.getByLabel("Discount (₹)").fill("1000");
     await page.getByRole("button", { name: "Save invoice to library" }).click();
     await page.waitForFunction(
       (key) =>
@@ -122,7 +122,7 @@ const fs = require("node:fs/promises");
     const backup = JSON.parse(await fs.readFile(backupPath, "utf8"));
     assert.equal(backup.history.length, 2);
     await page.reload();
-    await page.getByLabel("Discount (%)").waitFor();
+    await page.getByLabel("Discount (₹)").waitFor();
     assert.equal(
       await page.getByLabel("Customer / company name").inputValue(),
       "Browser QA Customer",
@@ -144,9 +144,9 @@ const fs = require("node:fs/promises");
       .getByRole("button", { name: "Open", exact: true })
       .click();
     assert.equal(await page.getByLabel("Document type").inputValue(), "tax");
-    assert.equal(await page.getByLabel("Discount (%)").count(), 0);
+    assert.equal(await page.getByLabel("Discount (₹)").count(), 0);
     await page.getByLabel("Restore backup").setInputFiles(backupPath);
-    await page.getByLabel("Discount (%)").waitFor();
+    await page.getByLabel("Discount (₹)").waitFor();
     await page.getByLabel("Restore backup").setInputFiles({
       name: "broken.json",
       mimeType: "application/json",
@@ -187,7 +187,7 @@ const fs = require("node:fs/promises");
       "{broken",
     );
     await page.getByLabel("Restore backup").setInputFiles(backupPath);
-    await page.getByLabel("Discount (%)").waitFor();
+    await page.getByLabel("Discount (₹)").waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     const qaDirectory = process.env.INVOICE_QA_DIR;
     if (qaDirectory) {

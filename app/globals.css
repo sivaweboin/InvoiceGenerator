@@ -1643,7 +1643,22 @@ h2 {
 }
 .proforma-parties section:last-child {
   grid-column: 2;
-  text-align: right;
+  text-align: left;
+  width: 100%;
+  max-width: 100%;
+  justify-self: end;
+}
+.proforma-parties section.client-with-gst {
+  width: max-content;
+}
+.proforma-parties .client-with-gst > h3,
+.proforma-parties .client-with-gst > p:nth-child(2) {
+  width: 0;
+  min-width: 100%;
+  overflow-wrap: anywhere;
+}
+.proforma-parties .client-with-gst > p:last-child {
+  white-space: nowrap;
 }
 .proforma-parties section > p:nth-child(2) {
   min-height: 4.65em;

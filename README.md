@@ -1,6 +1,6 @@
 # Weboin Invoice Workspace
 
-Create Tax and Proforma invoices, preview them, save an invoice library, and download named A4 PDFs. Proforma supports percentage discounts per item, applied before tax. Tax and Proforma keep separate layouts and can use the same document number without overwriting each other.
+Create Tax and Proforma invoices, preview them, save an invoice library, and download named A4 PDFs. Proforma supports fixed-amount discounts per item, applied before tax. Tax and Proforma keep separate layouts and can use the same document number without overwriting each other.
 
 ## Development
 

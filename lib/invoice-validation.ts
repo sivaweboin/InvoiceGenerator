@@ -38,9 +38,13 @@ export function validateInvoice(invoice: Invoice): string[] {
       errors.push(`${label}: quantity must be between 0.01 and 1,000,000.`);
     if (
       invoice.documentType === "proforma" &&
-      !validNumber(item.discount || "0", 0, 100)
+      !validNumber(
+        item.discount || "0",
+        0,
+        Number(item.price) * Number(item.quantity),
+      )
     )
-      errors.push(`${label}: discount must be between 0 and 100%.`);
+      errors.push(`${label}: discount must be between ₹0 and the item total.`);
     if (Number(item.price) * Number(item.quantity) > 1e12)
       errors.push(`${label}: total exceeds the supported amount.`);
   });

@@ -35,7 +35,8 @@ const fixture = (type) => ({
       sac: "998313",
       price: "10000",
       quantity: "2",
-      discount: "10",
+      discount: "2000",
+      discountMode: "amount",
     },
   ],
 });
