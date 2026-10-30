@@ -1,9 +1,10 @@
-import { jsPDF } from "jspdf";
+import { createPdfDocument, invoiceFilename } from "./pdf-document";
 import {
   calculateInvoiceTotals,
   calculateLineTotal,
 } from "./invoice-calculations";
-import { proformaCompany } from "./proforma-company";
+import { loadPdfAssets } from "./pdf-assets";
+import { assertValidInvoice } from "./invoice-validation";
 import type { Business, Invoice } from "./invoice-types";
 
 const NAVY = "#201a64";
@@ -12,15 +13,8 @@ const money = (value: number) =>
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
-const safeName = (value: string) =>
-  value
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, "-")
-    .replace(/\s+/g, "-")
-    .replace(/^[. -]+|[. -]+$/g, "")
-    .slice(0, 90);
-
 export function proformaFilename(invoice: Invoice) {
-  return `Proforma-Invoice-${safeName(invoice.number) || "draft"}-${safeName(invoice.customer) || "customer"}-${safeName(invoice.date)}.pdf`;
+  return invoiceFilename(invoice, "Proforma");
 }
 
 export function createProformaPdf(
@@ -29,17 +23,10 @@ export function createProformaPdf(
   logo?: string,
   fonts?: { regular: string; bold: string },
 ) {
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  if (fonts) {
-    doc.addFileToVFS("calibri.ttf", fonts.regular);
-    doc.addFont("calibri.ttf", "Calibri", "normal");
-    doc.addFileToVFS("calibri-bold.ttf", fonts.bold);
-    doc.addFont("calibri-bold.ttf", "Calibri", "bold");
-  }
-  const fontFamily = fonts ? "Calibri" : "helvetica";
+  const { doc, fontFamily } = createPdfDocument(fonts);
   doc.setProperties({
     title: `Proforma Invoice ${invoice.number}`,
-    author: proformaCompany.name,
+    author: business.name,
     subject: `Proforma Invoice for ${invoice.customer}`,
   });
 
@@ -65,11 +52,25 @@ export function createProformaPdf(
     doc.setDrawColor(NAVY);
     doc.setLineWidth(0.35);
     doc.circle(11, 286, 3.5);
-    doc.circle(11, 286, 1.8);
+    doc.ellipse(11, 286, 1.5, 3.5);
     doc.line(7.7, 286, 14.3, 286);
-    doc.line(11, 282.5, 11, 289.5);
-    text("www.weboin.com", 18, 287, 9);
+    doc.line(8.1, 284.3, 13.9, 284.3);
+    doc.line(8.1, 287.7, 13.9, 287.7);
+    doc.setFont(fontFamily, "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(NAVY);
+    doc.textWithLink("www.weboin.com", 18, 287, {
+      url: "https://www.weboin.com",
+    });
     doc.circle(173, 286, 3.5);
+    // Phone handset inside the circular contact icon.
+    doc.line(171.5, 284, 171, 284.5);
+    doc.line(171, 284.5, 171.5, 286);
+    doc.line(171.5, 286, 173, 287.5);
+    doc.line(173, 287.5, 174.5, 288);
+    doc.line(174.5, 288, 175, 287.5);
+    doc.line(171.5, 286, 172.4, 285.4);
+    doc.line(173.6, 286.6, 174.5, 286);
     doc.textWithLink(
       business.phone,
       205 - doc.getTextWidth(business.phone),
@@ -81,8 +82,9 @@ export function createProformaPdf(
   };
   const pageHeader = (continuation = false) => {
     if (logo) doc.addImage(logo, "PNG", 2, 7, 62, 20);
-    else text(proformaCompany.name, 3, 23, 26, true);
+    else text(business.name, 3, 23, 26, true);
     text(`Pro-Invoice No - ${invoice.number}`, 205, 17, 9, true, "right");
+    text(`Date: ${invoice.date}`, 205, 23, 9, false, "right");
     if (continuation) {
       text("PROFORMA INVOICE", 105, 37, 19, true, "center");
       rule(44);
@@ -92,33 +94,28 @@ export function createProformaPdf(
   };
   pageHeader();
   const companyBlock = (x: number, name: string) => {
+    doc.setFont(fontFamily, "bold");
+    doc.setFontSize(9);
     const nameLines: string[] = doc.splitTextToSize(
       (name || " ").toUpperCase(),
-      78,
+      x > 100 ? 69 : 78,
     );
     nameLines.forEach((line, index) => text(line, x, 70 + index * 5, 9, true));
     return 70 + nameLines.length * 5;
   };
-  const businessLines: string[] = doc.splitTextToSize(
-    proformaCompany.address,
-    78,
-  );
+  doc.setFont(fontFamily, "normal");
+  doc.setFontSize(8);
+  const businessLines: string[] = doc.splitTextToSize(business.address, 78);
   const customerLines: string[] = doc.splitTextToSize(
     invoice.address || " ",
-    78,
+    69,
   );
-  let businessY = companyBlock(10, proformaCompany.name);
+  let businessY = companyBlock(10, business.name);
   businessLines.forEach((line, index) =>
     text(line, 10, businessY + index * 4.5, 8),
   );
   businessY += businessLines.length * 4.5 + 2;
-  text(
-    `GST Number: ${proformaCompany.gst}`,
-    10,
-    businessY,
-    8,
-    true,
-  );
+  text(`GST Number: ${business.gst}`, 10, businessY, 8, true);
 
   let customerY = companyBlock(133, invoice.customer || "Customer name");
   customerLines.forEach((line, index) =>
@@ -155,40 +152,52 @@ export function createProformaPdf(
   }
 
   for (const item of invoice.items) {
+    doc.setFont(fontFamily, "bold");
+    doc.setFontSize(9);
     const descriptionLines: string[] = doc.splitTextToSize(
       item.description || " ",
       76,
     );
-    const rowHeight = Math.max(14, descriptionLines.length * 5 + 7);
-    if (y + rowHeight > 250) {
-      addPage();
-      y = drawTableHeader(y);
+    if (Number(item.discount) > 0)
+      descriptionLines.push(`Discount: ${item.discount}%`);
+    let offset = 0;
+    while (offset < descriptionLines.length) {
+      if (y + 14 > 250) {
+        addPage();
+        y = drawTableHeader(y);
+      }
+      const count = Math.max(1, Math.floor((250 - y - 7) / 5));
+      const chunk = descriptionLines.slice(offset, offset + count);
+      const rowHeight = Math.max(14, chunk.length * 5 + 7);
+      chunk.forEach((line, index) =>
+        text(line, columns[0] + 2, y + 6 + index * 5, 9, index === 0),
+      );
+      if (offset === 0) {
+        text(item.sac, centers[1], y + 7, 9, true, "center");
+        text(
+          Number(item.price || 0).toLocaleString("en-IN", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }),
+          centers[2],
+          y + 7,
+          9,
+          false,
+          "center",
+        );
+        text(item.quantity, centers[3], y + 7, 9, false, "center");
+        text(
+          money(calculateLineTotal(item, "proforma")),
+          centers[4],
+          y + 7,
+          9,
+          false,
+          "center",
+        );
+      }
+      y += rowHeight;
+      offset += chunk.length;
     }
-    descriptionLines.forEach((line, index) =>
-      text(line, columns[0] + 2, y + 6 + index * 5, 9, index === 0),
-    );
-    text(item.sac, centers[1], y + 7, 9, true, "center");
-    text(
-      Number(item.price || 0).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      }),
-      centers[2],
-      y + 7,
-      9,
-      false,
-      "center",
-    );
-    text(item.quantity, centers[3], y + 7, 9, false, "center");
-    text(
-      money(calculateLineTotal(item, "proforma")),
-      centers[4],
-      y + 7,
-      9,
-      false,
-      "center",
-    );
-    y += rowHeight;
   }
   rule(y);
 
@@ -209,8 +218,14 @@ export function createProformaPdf(
   rows.push(["TOTAL AMOUNT", total]);
 
   const totalRowHeight = 8;
-  if (y + rows.length * totalRowHeight > 258) addPage();
-  y = Math.max(y + 11, firstTableY < 120 ? 165 : y + 11);
+  const totalsStart = Math.max(
+    y + 11,
+    doc.getNumberOfPages() === 1 && firstTableY < 120 ? 165 : y + 11,
+  );
+  if (totalsStart + rows.length * totalRowHeight > 258) {
+    addPage();
+    y += 11;
+  } else y = totalsStart;
   for (const [label, amount] of rows) {
     text(`${label}:`, 122, y, 10, true, "right");
     text(money(amount), 195, y, 10, true, "right");
@@ -218,9 +233,12 @@ export function createProformaPdf(
   }
 
   y = Math.max(y + 8, doc.getNumberOfPages() === 1 ? 225 : y + 8);
+  if (y > 255) addPage();
   text("NOTE -", 8, y, 9, true);
   text("Amounts in INR", 195, y, 9, true, "right");
   y += 6;
+  doc.setFont(fontFamily, "normal");
+  doc.setFontSize(9);
   const noteLines: string[] = doc.splitTextToSize(invoice.note || " ", 128);
   for (const line of noteLines) {
     if (y > 268) addPage();
@@ -271,9 +289,11 @@ export function createProformaPdf(
       }
       text(prefix, x, y, 9, true);
       text(lines[0], x + labelWidth, y, 9);
-      lines.slice(1).forEach((line, index) =>
-        text(line, x + labelWidth, y + (index + 1) * 5, 9),
-      );
+      lines
+        .slice(1)
+        .forEach((line, index) =>
+          text(line, x + labelWidth, y + (index + 1) * 5, 9),
+        );
       y += (lines.length - 1) * 5;
       x += labelWidth + Math.min(valueWidth, available) + 3;
     }
@@ -288,16 +308,9 @@ export async function downloadProformaPdf(
   invoice: Invoice,
   business: Business,
 ) {
-  const logoResponse = await fetch("/weboin-logo.png");
-  if (!logoResponse.ok) throw new Error("Could not load proforma logo");
-  const logoBlob = await logoResponse.blob();
-  const logo = await new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-    reader.readAsDataURL(logoBlob);
-  });
+  assertValidInvoice(invoice);
+  const { logo, fonts } = await loadPdfAssets();
   const filename = proformaFilename(invoice);
-  createProformaPdf(invoice, business, logo).save(filename);
+  createProformaPdf(invoice, business, logo, fonts).save(filename);
   return filename;
 }

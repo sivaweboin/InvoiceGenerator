@@ -3,8 +3,14 @@ import type { Invoice, Item } from "./invoice-types";
 export const roundCurrency = (value: number) =>
   Math.round((value + Number.EPSILON) * 100) / 100;
 
+// Keep the live preview stable while a numeric input is temporarily incomplete.
+const number = (value: string, max = Number.MAX_SAFE_INTEGER) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(max, parsed)) : 0;
+};
+
 export function calculateLineGross(item: Item) {
-  return roundCurrency(Number(item.price || 0) * Number(item.quantity || 0));
+  return roundCurrency(number(item.price) * number(item.quantity));
 }
 
 export function calculateLineDiscount(
@@ -13,7 +19,7 @@ export function calculateLineDiscount(
 ) {
   if (documentType !== "proforma") return 0;
   return roundCurrency(
-    (calculateLineGross(item) * Number(item.discount || 0)) / 100,
+    (calculateLineGross(item) * number(item.discount, 100)) / 100,
   );
 }
 
@@ -32,8 +38,7 @@ export function calculateInvoiceTotals(invoice: Invoice) {
   );
   const discountTotal = roundCurrency(
     invoice.items.reduce(
-      (sum, item) =>
-        sum + calculateLineDiscount(item, invoice.documentType),
+      (sum, item) => sum + calculateLineDiscount(item, invoice.documentType),
       0,
     ),
   );
@@ -43,7 +48,7 @@ export function calculateInvoiceTotals(invoice: Invoice) {
       0,
     ),
   );
-  const taxRate = invoice.tax === "none" ? 0 : Number(invoice.rate || 0);
+  const taxRate = invoice.tax === "none" ? 0 : number(invoice.rate, 100);
   const taxPart = roundCurrency(
     (subtotal * taxRate) / (invoice.tax === "split" ? 200 : 100),
   );
