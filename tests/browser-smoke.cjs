@@ -16,6 +16,22 @@ const fs = require("node:fs/promises");
   const key = "weboin-workspace-v1";
   try {
     await page.goto(url);
+    if (
+      await page.getByRole("button", { name: "Log in", exact: true }).count()
+    ) {
+      assert.ok(
+        process.env.AUTH_PASSWORD,
+        "Set AUTH_PASSWORD to run the invoice smoke test against a protected server",
+      );
+      await page
+        .getByLabel("Login ID")
+        .fill(process.env.AUTH_LOGIN_ID || "invoice@weboin.com");
+      await page
+        .getByLabel("Password", { exact: true })
+        .fill(process.env.AUTH_PASSWORD);
+      await page.getByRole("button", { name: "Log in", exact: true }).click();
+      await page.getByLabel("Document type").waitFor();
+    }
     await page.getByRole("button", { name: "Download PDF" }).click();
     await page
       .getByRole("alert")
@@ -48,11 +64,9 @@ const fs = require("node:fs/promises");
     await page.getByLabel("Document type").selectOption("proforma");
     const proformaPaper = await page.locator(".invoice-paper").boundingBox();
     if (process.env.INVOICE_QA_DIR)
-      await page
-        .locator(".invoice-paper")
-        .screenshot({
-          path: `${process.env.INVOICE_QA_DIR}/proforma-preview.png`,
-        });
+      await page.locator(".invoice-paper").screenshot({
+        path: `${process.env.INVOICE_QA_DIR}/proforma-preview.png`,
+      });
     assert.ok(Math.abs(taxPaper.width - proformaPaper.width) < 1);
     assert.ok(Math.abs(taxPaper.height - proformaPaper.height) < 2);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -60,7 +74,28 @@ const fs = require("node:fs/promises");
     await page.getByLabel("Document type").selectOption("tax");
     const taxMobile = await page.locator(".invoice-paper").boundingBox();
     assert.ok(Math.abs(taxMobile.width - proformaMobile.width) < 1);
-    assert.ok(Math.abs(taxMobile.height - proformaMobile.height) < 2);
+    for (const paper of [taxMobile, proformaMobile]) {
+      assert.ok(paper.height >= (paper.width * 297) / 210 - 2);
+    }
+    assert.ok(
+      await page.locator(".invoice-paper").evaluate((paper) => {
+        const footer = paper
+          .querySelector(".invoice-footer")
+          .getBoundingClientRect();
+        const content = paper
+          .querySelector(".paper-content")
+          .getBoundingClientRect();
+        const bottom = paper
+          .querySelector(".invoice-bottom")
+          .getBoundingClientRect();
+        return (
+          footer.top >= content.bottom - 1 &&
+          footer.top >= bottom.bottom &&
+          paper.getBoundingClientRect().bottom >= footer.bottom
+        );
+      }),
+      "Mobile tax footer stays below notes/signature and inside the paper",
+    );
     await page.getByLabel("Document type").selectOption("proforma");
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.getByLabel("Discount (%)").fill("10");

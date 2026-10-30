@@ -86,57 +86,63 @@ export default function BusinessForm({
             <span>Signature saved in this browser</span>
           </div>
         )}
-        <label className="signature-upload">
-          <span>
-            {business.signatureImage
-              ? "Replace signature image"
-              : "Upload signature image"}
-          </span>
-          <input
-            type="file"
-            className="signature-file-input"
-            accept="image/png,image/jpeg"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (
-                !["image/png", "image/jpeg"].includes(file.type) ||
-                file.size > 1024 * 1024
-              ) {
-                setStatus("Choose a PNG or JPG image smaller than 1 MB.");
+b        <div className="signature-actions">
+          <label className="signature-upload">
+            <span>
+              {business.signatureImage
+                ? "Replace signature image"
+                : "Upload signature image"}
+            </span>
+            <input
+              type="file"
+              className="signature-file-input"
+              accept="image/png,image/jpeg"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (!["image/png", "image/jpeg"].includes(file.type)) {
+                  setStatus("Choose a PNG or JPG image.");
+                  e.target.value = "";
+                  return;
+                }
+                if (file.size > 1024 * 1024) {
+                  setStatus(
+                    "This file exceeds the 1 MB limit. Choose an image that is 1 MB or smaller.",
+                  );
+                  e.target.value = "";
+                  return;
+                }
+                try {
+                  const data = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(String(reader.result));
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                  });
+                  const image = new window.Image();
+                  image.src = data;
+                  await image.decode();
+                  updateBusiness("signatureImage", data);
+                } catch {
+                  setStatus(
+                    "This image could not be read. Choose a valid PNG or JPG.",
+                  );
+                }
                 e.target.value = "";
-                return;
-              }
-              try {
-                const data = await new Promise<string>((resolve, reject) => {
-                  const reader = new FileReader();
-                  reader.onload = () => resolve(String(reader.result));
-                  reader.onerror = reject;
-                  reader.readAsDataURL(file);
-                });
-                const image = new window.Image();
-                image.src = data;
-                await image.decode();
-                updateBusiness("signatureImage", data);
-              } catch {
-                setStatus(
-                  "This image could not be read. Choose a valid PNG or JPG.",
-                );
-              }
-              e.target.value = "";
-            }}
-          />
-        </label>
+              }}
+            />
+          </label>
+          {business.signatureImage && (
+            <button
+              className="button secondary"
+              type="button"
+              onClick={() => updateBusiness("signatureImage", "")}
+            >
+              Remove signature image
+            </button>
+          )}
+        </div>
       </div>
-      {business.signatureImage && (
-        <button
-          className="button secondary"
-          type="button"
-          onClick={() => updateBusiness("signatureImage", "")}
-        >
-          Remove signature image
-        </button>
-      )}
     </>
   );
 }

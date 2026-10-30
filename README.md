@@ -54,3 +54,11 @@ This is a single-browser workspace. Different browsers, devices, and origins (in
 The Node test suite covers tax/discount calculations, rounding, validation, document-number collisions, immutable saved snapshots, backup migration, and PDF creation/pagination. Run `npm run format` after editing to keep the source consistently formatted.
 
 For the optional browser workflow check, start the app and run `node tests/browser-smoke.cjs` with Playwright and Chrome available. `PLAYWRIGHT_MODULE` can point to an installed Playwright package; `INVOICE_URL` selects the local server. Tests use an isolated browser context and do not change your browser's saved invoices. Set `INVOICE_QA_DIR` to capture PDF or screenshot samples during verification.
+
+## Single-account login
+
+Copy .env.example to .env.local and set AUTH_PASSWORD to a unique, strong password. Set AUTH_JWT_SECRET to a random secret of at least 32 characters (generate one with Node crypto.randomBytes(32).toString("hex")). The default login ID is invoice@weboin.com. Set the same variables in your hosting environment and use HTTPS in production. Never use NEXT_PUBLIC_ for these settings or commit .env.local. Missing settings disable login.
+
+Sessions use HS256 JWTs in an HTTP-only, SameSite=Strict cookie, have no JWT expiry, and use Secure cookies in production. The persistent cookie lasts up to 400 days (browsers may shorten or clear it). Sign out removes the browser session; rotating AUTH_JWT_SECRET invalidates all sessions. Login attempts are limited to ten failures per fifteen minutes per server process; use gateway/shared rate limiting for deployments with multiple instances.
+
+Invoices remain in browser localStorage. Login gates app access but does not encrypt locally saved data or share it between devices. Signing out preserves invoices on that device. Anyone with access to the browser profile can inspect its local storage.

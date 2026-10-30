@@ -12,11 +12,11 @@ export function validateInvoice(invoice: Invoice): string[] {
     errors.push("Enter a valid invoice date.");
   if (!invoice.customer.trim()) errors.push("Enter the customer name.");
   if (!invoice.address.trim()) errors.push("Enter the billing address.");
-  if (
-    invoice.gst.trim() &&
-    !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/.test(invoice.gst.trim())
-  )
-    errors.push("Customer GSTIN must be a valid 15-character format.");
+  // if (
+  //   invoice.gst.trim() &&
+  //   !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][A-Z0-9]Z[A-Z0-9]$/.test(invoice.gst.trim())
+  // )
+  //   errors.push("Customer GSTIN must be a valid 15-character format.");
   if (!["tax", "proforma"].includes(invoice.documentType))
     errors.push("Choose a document type.");
   if (!["split", "igst", "none"].includes(invoice.tax))

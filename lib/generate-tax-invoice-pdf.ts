@@ -10,7 +10,7 @@ import type { Business, Invoice } from "./invoice-types";
 // Edit this file to change the downloaded PDF's layout, labels and filename.
 const NAVY = "#201a64";
 const money = (n: number) =>
-  `INR ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  `${n < 0 ? "-" : ""}₹${Math.abs(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export function taxInvoiceFilename(invoice: Invoice) {
   return invoiceFilename(invoice, "Tax");
 }
@@ -54,15 +54,22 @@ export function createTaxInvoicePdf(
     doc.textWithLink(business.email, 15, 282, {
       url: `mailto:${business.email}`,
     });
-    doc.textWithLink(
-      business.phone,
-      195 - doc.getTextWidth(business.phone),
-      282,
-      { url: phoneUrl },
-    );
+    const phoneX = 195 - doc.getTextWidth(business.phone);
+    doc.textWithLink(business.phone, phoneX, 282, { url: phoneUrl });
     // Vector location pin avoids missing icon glyphs in PDF readers.
     doc.setDrawColor("#ffffff");
     doc.setLineWidth(0.35);
+    // Draw the handset as a vector so it works independently of PDF fonts.
+    const iconX = phoneX - 5;
+    doc.line(iconX, 278.2, iconX - 0.6, 278.8);
+    doc.line(iconX - 0.6, 278.8, iconX - 0.1, 280.2);
+    doc.line(iconX - 0.1, 280.2, iconX + 1.3, 281.6);
+    doc.line(iconX + 1.3, 281.6, iconX + 2.7, 282.1);
+    doc.line(iconX + 2.7, 282.1, iconX + 3.3, 281.5);
+    doc.line(iconX, 278.2, iconX + 0.8, 279.2);
+    doc.line(iconX + 0.8, 279.2, iconX + 0.1, 280);
+    doc.line(iconX + 1.5, 281.3, iconX + 2.3, 280.6);
+    doc.line(iconX + 2.3, 280.6, iconX + 3.3, 281.5);
     doc.circle(73, 278.7, 1.7, "S");
     doc.circle(73, 278.7, 0.55, "S");
     doc.line(71.6, 279.7, 73, 282.2);
@@ -87,7 +94,7 @@ export function createTaxInvoicePdf(
     const lines: string[] = doc.splitTextToSize(value || " ", width);
     for (const line of lines) {
       room(5);
-      text(line, 15, y, size, bold);
+      text(line, 13, y, size, bold);
       y += 5;
     }
     y += 2;
@@ -112,13 +119,16 @@ export function createTaxInvoicePdf(
   };
   pageHeader();
   text("BILL TO -", 13, 48, 13, true);
-  text(invoice.customer, 13, 57, 12, false);
+  text(invoice.customer, 13, 55, 12, false);
   doc.setFontSize(10);
   doc.setFont(fontFamily, "normal");
   const address: string[] = doc.splitTextToSize(invoice.address, 95);
-  address.forEach((line, index) => text(line, 13, 64 + index * 4.5, 10));
-  const tableTop = Math.max(81, 71 + address.length * 4.5);
-  text(`GST Number: ${invoice.gst || ""}`, 13, tableTop - 5, 10, false);
+  address.forEach((line, index) => text(line, 13, 62 + index * 5, 10));
+  const addressBottom = 62 + Math.max(0, address.length - 1) * 5;
+  const gstY = addressBottom + 7;
+  const tableTop = (invoice.gst.trim() ? gstY : addressBottom) + 7;
+  if (invoice.gst.trim())
+    text(`GST Number: ${invoice.gst}`, 13, gstY, 10, false);
   const columns = [13, 72, 99, 136, 160, 197];
   const centers = [42.5, 85.5, 117.5, 148, 178.5];
   const grid = (top: number, height: number, totals = false) => {
@@ -134,7 +144,7 @@ export function createTaxInvoicePdf(
     doc.rect(13, y, 184, 15, "F");
     grid(y, 15);
     doc.setFont(fontFamily, "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(12);
     doc.setTextColor("#ffffff");
     ["DESCRIPTION", "SAC CODE", "PRICE", "QTY", "TOTAL"].forEach(
       (label, index) =>
@@ -154,8 +164,8 @@ export function createTaxInvoicePdf(
   // Render exactly the services entered; never add filler rows.
   const items = invoice.items;
   for (const item of items) {
-    doc.setFont(fontFamily, "normal");
-    doc.setFontSize(11);
+    doc.setFont(fontFamily, "bold");
+    doc.setFontSize(12);
     const lines: string[] = doc.splitTextToSize(item.description || " ", 53);
     const amount = calculateLineTotal(item, "tax");
     let offset = 0;
@@ -180,32 +190,23 @@ export function createTaxInvoicePdf(
           line,
           centers[0],
           y + (height - chunk.length * 5) / 2 + 4 + index * 5,
-          11,
-          false,
+          12,
+          true,
           "center",
         ),
       );
       if (offset === 0 && item.description) {
-        text(item.sac, centers[1], y + height / 2 + 1, 10, false, "center");
+        text(item.sac, centers[1], y + height / 2 + 1, 11, true, "center");
         text(
-          Number(item.price || 0).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-          }),
+          money(Number(item.price || 0)),
           centers[2],
           y + height / 2 + 1,
-          10,
-          false,
-          "center",
-        );
-        text(
-          item.quantity,
-          centers[3],
-          y + height / 2 + 1,
           11,
-          false,
+          true,
           "center",
         );
-        text(money(amount), centers[4], y + height / 2 + 1, 9, false, "center");
+        text(item.quantity, centers[3], y + height / 2 + 1, 12, true, "center");
+        text(money(amount), centers[4], y + height / 2 + 1, 10, true, "center");
       }
       y += height;
       offset += count;
@@ -230,8 +231,8 @@ export function createTaxInvoicePdf(
   }
   rows.forEach(([label, amount]) => {
     grid(y, 14, true);
-    text(label, 86.5, y + 8.5, 11, label === "GRAND TOTAL", "center");
-    text(money(amount), 178.5, y + 8.5, 9, label === "GRAND TOTAL", "center");
+    text(label, 86.5, y + 8.5, 12, true, "center");
+    text(money(amount), 178.5, y + 8.5, 10, true, "center");
     y += 14;
   });
   // Preserve the reference's whitespace between the table and payment block.
@@ -286,7 +287,7 @@ export function createTaxInvoicePdf(
         text(line, x + labelWidth, y + index * 5, 10),
       );
       y += (lines.length - 1) * 5;
-      x += labelWidth + Math.min(valueWidth, available) + 2;
+      x += labelWidth + Math.min(valueWidth, available);
     }
     y += 5;
   }

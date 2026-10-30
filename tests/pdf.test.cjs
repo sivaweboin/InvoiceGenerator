@@ -57,7 +57,14 @@ for (const [type, create] of [
     const output = doc.output();
     assert.equal(doc.getNumberOfPages(), 1);
     assert.ok(output.includes("33ABCDE1234F1Z5"));
-    assert.ok(output.includes(type === "tax" ? "23,600.00" : "21,240.00"));
+    const amount = type === "tax" ? "₹23,600.00" : "₹21,240.00";
+    const encoded = Array.from(amount, (character) =>
+      String.fromCharCode(
+        character.charCodeAt(0) >> 8,
+        character.charCodeAt(0) & 255,
+      ),
+    ).join("");
+    assert.ok(output.includes(encoded));
     assert.ok(output.includes("2026"));
   });
   test(`${type} PDF paginates long descriptions and retains final notes`, () => {
@@ -83,6 +90,13 @@ for (const [type, create] of [
     const invoice = fixture(type);
     const doc = create(invoice, business, logo, fonts);
     assert.ok(doc.getFontList().Calibri.includes("bold"));
+    for (const style of ["normal", "bold"]) {
+      doc.setFont("Calibri", style);
+      assert.ok(
+        doc.getFont().metadata.characterToGlyph(0x20b9),
+        "Calibri supports the rupee symbol",
+      );
+    }
     assert.equal(doc.getNumberOfPages(), 1);
     assert.ok(doc.output("arraybuffer").byteLength > 100000);
     if (process.env.INVOICE_QA_DIR) {

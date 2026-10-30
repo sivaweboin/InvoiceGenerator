@@ -1,7 +1,7 @@
 import { createPdfDocument, invoiceFilename } from "./pdf-document";
 import {
   calculateInvoiceTotals,
-  calculateLineTotal,
+  calculateLineGross,
 } from "./invoice-calculations";
 import { loadPdfAssets } from "./pdf-assets";
 import { assertValidInvoice } from "./invoice-validation";
@@ -9,7 +9,7 @@ import type { Business, Invoice } from "./invoice-types";
 
 const NAVY = "#201a64";
 const money = (value: number) =>
-  `INR ${value.toLocaleString("en-IN", {
+  `${value < 0 ? "-" : ""}₹${Math.abs(value).toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -100,7 +100,9 @@ export function createProformaPdf(
       (name || " ").toUpperCase(),
       x > 100 ? 69 : 78,
     );
-    nameLines.forEach((line, index) => text(line, x, 70 + index * 5, 9, true));
+    nameLines.forEach((line, index) =>
+      text(line, x, 70 + index * 5, 9, true, x > 100 ? "right" : "left"),
+    );
     return 70 + nameLines.length * 5;
   };
   doc.setFont(fontFamily, "normal");
@@ -110,19 +112,22 @@ export function createProformaPdf(
     invoice.address || " ",
     69,
   );
-  let businessY = companyBlock(10, business.name);
+  const addressY = Math.max(
+    companyBlock(10, business.name),
+    companyBlock(202, invoice.customer || "Customer name"),
+  );
   businessLines.forEach((line, index) =>
-    text(line, 10, businessY + index * 4.5, 8),
+    text(line, 10, addressY + index * 5, 8),
   );
-  businessY += businessLines.length * 4.5 + 2;
-  text(`GST Number: ${business.gst}`, 10, businessY, 8, true);
-
-  let customerY = companyBlock(133, invoice.customer || "Customer name");
   customerLines.forEach((line, index) =>
-    text(line, 133, customerY + index * 4.5, 8),
+    text(line, 202, addressY + index * 5, 8, false, "right"),
   );
-  customerY += customerLines.length * 4.5 + 2;
-  if (invoice.gst) text(`GST Number: ${invoice.gst}`, 133, customerY, 8, true);
+  const gstY =
+    addressY + Math.max(3, businessLines.length, customerLines.length) * 5;
+  if (business.gst.trim())
+    text(`GST Number: ${business.gst}`, 10, gstY, 8, true);
+  if (invoice.gst.trim())
+    text(`GST Number: ${invoice.gst}`, 202, gstY, 8, true, "right");
 
   const columns = [8, 91, 128, 155, 176, 202];
   const centers = [49.5, 109.5, 141.5, 165.5, 189];
@@ -134,10 +139,9 @@ export function createProformaPdf(
       (label, index) => doc.text(label, centers[index], y, { align: "center" }),
     );
     rule(y + 7);
-    return y + 13;
+    return y + 7;
   };
-  let y = drawTableHeader(Math.max(businessY, customerY) + 10);
-  const firstTableY = y;
+  let y = drawTableHeader(gstY + 10);
   const addPage = () => {
     footer();
     doc.addPage();
@@ -158,8 +162,6 @@ export function createProformaPdf(
       item.description || " ",
       76,
     );
-    if (Number(item.discount) > 0)
-      descriptionLines.push(`Discount: ${item.discount}%`);
     let offset = 0;
     while (offset < descriptionLines.length) {
       if (y + 14 > 250) {
@@ -169,29 +171,27 @@ export function createProformaPdf(
       const count = Math.max(1, Math.floor((250 - y - 7) / 5));
       const chunk = descriptionLines.slice(offset, offset + count);
       const rowHeight = Math.max(14, chunk.length * 5 + 7);
+      const textY = y + (rowHeight - (chunk.length - 1) * 5) / 2 + 1.5;
       chunk.forEach((line, index) =>
-        text(line, columns[0] + 2, y + 6 + index * 5, 9, index === 0),
+        text(line, columns[0] + 2, textY + index * 5, 9, true),
       );
       if (offset === 0) {
-        text(item.sac, centers[1], y + 7, 9, true, "center");
+        text(item.sac, centers[1], textY, 9, true, "center");
         text(
-          Number(item.price || 0).toLocaleString("en-IN", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }),
+          money(Number(item.price || 0)),
           centers[2],
-          y + 7,
+          textY,
           9,
-          false,
+          true,
           "center",
         );
-        text(item.quantity, centers[3], y + 7, 9, false, "center");
+        text(item.quantity, centers[3], textY, 9, true, "center");
         text(
-          money(calculateLineTotal(item, "proforma")),
+          money(calculateLineGross(item)),
           centers[4],
-          y + 7,
+          textY,
           9,
-          false,
+          true,
           "center",
         );
       }
@@ -201,12 +201,13 @@ export function createProformaPdf(
   }
   rule(y);
 
-  const { grossSubtotal, discountTotal, taxRate, taxPart, total } =
+  const { grossSubtotal, discountTotal, subtotal, taxRate, taxPart, total } =
     calculateInvoiceTotals({ ...invoice, documentType: "proforma" });
   const rows: [string, number][] = [];
   if (discountTotal > 0) {
     rows.push(["SUBTOTAL", grossSubtotal], ["DISCOUNT", -discountTotal]);
   }
+  rows.push(["TOTAL", subtotal]);
   if (invoice.tax === "split") {
     rows.push(
       [`CGST @${taxRate / 2}%`, taxPart],
@@ -218,17 +219,26 @@ export function createProformaPdf(
   rows.push(["TOTAL AMOUNT", total]);
 
   const totalRowHeight = 8;
-  const totalsStart = Math.max(
-    y + 11,
-    doc.getNumberOfPages() === 1 && firstTableY < 120 ? 165 : y + 11,
-  );
+  doc.setFont(fontFamily, "bold");
+  doc.setFontSize(10);
+  const summaryLeft = centers[1] - doc.getTextWidth("SAC CODE") / 2;
+  const totalsStart = y + 11;
   if (totalsStart + rows.length * totalRowHeight > 258) {
     addPage();
     y += 11;
   } else y = totalsStart;
   for (const [label, amount] of rows) {
-    text(`${label}:`, 122, y, 10, true, "right");
-    text(money(amount), 195, y, 10, true, "right");
+    if (discountTotal > 0 && (label === "TOTAL" || label === "TOTAL AMOUNT")) {
+      doc.setDrawColor("#999999");
+      doc.setLineWidth(0.25);
+      doc.setFont(fontFamily, "bold");
+      doc.setFontSize(10);
+      const summaryRight = centers[4] + doc.getTextWidth(money(amount)) / 2;
+      doc.line(summaryLeft, y - 5, summaryRight, y - 5);
+      doc.line(summaryLeft, y + 3, summaryRight, y + 3);
+    }
+    text(`${label}:`, summaryLeft, y, 10, true, "left");
+    text(money(amount), centers[4], y, 10, true, "center");
     y += totalRowHeight;
   }
 
@@ -263,7 +273,7 @@ export function createProformaPdf(
     if (!entries.length) continue;
     let x = 8;
     for (const [label, value] of entries) {
-      let prefix = `${x > 8 ? "   " : ""}${label}: `;
+      let prefix = `${x > 8 ? ", " : ""}${label}: `;
       doc.setFontSize(9);
       doc.setFont(fontFamily, "bold");
       let labelWidth = doc.getTextWidth(prefix);
@@ -295,7 +305,7 @@ export function createProformaPdf(
           text(line, x + labelWidth, y + (index + 1) * 5, 9),
         );
       y += (lines.length - 1) * 5;
-      x += labelWidth + Math.min(valueWidth, available) + 3;
+      x += labelWidth + Math.min(valueWidth, available);
     }
     y += 5;
   }

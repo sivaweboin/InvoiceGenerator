@@ -13,10 +13,12 @@
     "format:check": "prettier --check app components hooks lib tests README.md package.json eslint.config.mjs"
   },
   "dependencies": {
+    "jose": "^6.2.14",
     "jspdf": "^4.2.1",
     "next": "16.4.3",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",

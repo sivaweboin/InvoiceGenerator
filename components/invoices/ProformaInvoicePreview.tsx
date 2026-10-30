@@ -1,8 +1,8 @@
 import Image from "next/image";
-import type { Business, Invoice, Item } from "../../lib/invoice-types";
+import type { Business, Invoice } from "../../lib/invoice-types";
 import {
   calculateInvoiceTotals,
-  calculateLineTotal,
+  calculateLineGross,
 } from "../../lib/invoice-calculations";
 import { money } from "../../lib/invoice-model";
 export default function ProformaInvoicePreview({
@@ -12,10 +12,8 @@ export default function ProformaInvoicePreview({
   invoice: Invoice;
   business: Business;
 }) {
-  const { grossSubtotal, discountTotal, taxRate, taxPart, total } =
+  const { grossSubtotal, discountTotal, subtotal, taxRate, taxPart, total } =
     calculateInvoiceTotals(invoice);
-  const lineTotal = (item: Item) =>
-    calculateLineTotal(item, invoice.documentType);
   return (
     <article className="invoice-paper proforma-paper">
       <header className="proforma-header">
@@ -30,14 +28,16 @@ export default function ProformaInvoicePreview({
         <section>
           <h3>{business.name}</h3>
           <p>{business.address}</p>
-          <p>
-            <b>GST Number:</b> {business.gst}
-          </p>
+          {business.gst.trim() && (
+            <p>
+              <b>GST Number:</b> {business.gst}
+            </p>
+          )}
         </section>
         <section>
           <h3>{invoice.customer || "Customer name"}</h3>
           <p>{invoice.address || "Customer address"}</p>
-          {invoice.gst && (
+          {invoice.gst.trim() && (
             <p>
               <b>GST Number:</b> {invoice.gst}
             </p>
@@ -57,23 +57,18 @@ export default function ProformaInvoicePreview({
         <tbody>
           {invoice.items.map((item) => (
             <tr key={item.id}>
-              <td>
-                {item.description || "Service name"}
-                {Number(item.discount) > 0 && (
-                  <small className="item-discount">
-                    Discount: {item.discount}%
-                  </small>
-                )}
-              </td>
+              <td>{item.description || "Service name"}</td>
               <td>{item.sac || "—"}</td>
               <td>{money(Number(item.price || 0))}</td>
               <td>{item.quantity || "0"}</td>
-              <td>{money(lineTotal(item))}</td>
+              <td>{money(calculateLineGross(item))}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="proforma-summary">
+      <div
+        className={`proforma-summary${discountTotal > 0 ? " has-discount" : ""}`}
+      >
         {discountTotal > 0 && (
           <>
             <div>
@@ -86,6 +81,10 @@ export default function ProformaInvoicePreview({
             </div>
           </>
         )}
+        <div className="proforma-net-total">
+          <span>Total:</span>
+          <b>{money(subtotal)}</b>
+        </div>
         {invoice.tax === "split" ? (
           <>
             <div>
@@ -121,14 +120,14 @@ export default function ProformaInvoicePreview({
             <p>
               {business.bank && (
                 <>
-                  <b>BANK - </b>
+                  <b>BANK: </b>
                   {business.bank}
                 </>
               )}
               {business.bank && business.branch ? ", " : ""}
               {business.branch && (
                 <>
-                  <b>Branch - </b>
+                  <b>Branch: </b>
                   {business.branch}
                 </>
               )}

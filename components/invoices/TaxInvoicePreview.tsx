@@ -43,7 +43,7 @@ export default function TaxInvoicePreview({
           <span className="paper-label">BILL TO</span>
           <h3>{invoice.customer || "Customer name"}</h3>
           <p>{invoice.address || "Customer billing address"}</p>
-          {invoice.gst && (
+          {invoice.gst.trim() && (
             <p>
               <b>GSTIN:</b> {invoice.gst}
             </p>
@@ -176,7 +176,23 @@ export default function TaxInvoicePreview({
           </svg>
           <span>{business.address}</span>
         </a>
-        <a href={`tel:${business.phone.replace(/[^+0-9]/g, "")}`}>
+        <a
+          className="footer-phone"
+          href={`tel:${business.phone.replace(/[^+0-9]/g, "")}`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7l.5 2.8a2 2 0 0 1-.6 1.8L7.8 9.5a16 16 0 0 0 6.7 6.7l1.2-1.2a2 2 0 0 1 1.8-.6l2.8.5a2 2 0 0 1 1.7 2Z" />
+          </svg>
           {business.phone}
         </a>
       </footer>
