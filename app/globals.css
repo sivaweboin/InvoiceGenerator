@@ -1800,7 +1800,7 @@ h2 {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 2px;
 }
 .proforma-footer svg {
   flex: none;

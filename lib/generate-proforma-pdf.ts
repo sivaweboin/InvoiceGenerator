@@ -65,22 +65,26 @@ export function createProformaPdf(
     doc.textWithLink("www.weboin.com", 18, 287, {
       url: "https://www.weboin.com",
     });
+    const phoneTextX = 205 - doc.getTextWidth(business.phone);
+    const iconSize = 4.5;
+    const iconGap = 1;
+    const iconX = phoneTextX - iconSize - iconGap;
+    const iconY = 284;
     if (phoneIcon) {
-      doc.addImage(phoneIcon, "PNG", 169.5, 282.5, 7, 7);
+      doc.addImage(phoneIcon, "PNG", iconX, iconY, iconSize, iconSize);
     } else {
-      doc.circle(173, 286, 3.5);
-      // Phone handset inside the circular contact icon.
-      doc.line(171.5, 284, 171, 284.5);
-      doc.line(171, 284.5, 171.5, 286);
-      doc.line(171.5, 286, 173, 287.5);
-      doc.line(173, 287.5, 174.5, 288);
-      doc.line(174.5, 288, 175, 287.5);
-      doc.line(171.5, 286, 172.4, 285.4);
-      doc.line(173.6, 286.6, 174.5, 286);
+      doc.circle(iconX + iconSize / 2, iconY + iconSize / 2, iconSize / 2);
+      doc.line(iconX + 1.4, iconY + 1, iconX + 1.1, iconY + 1.4);
+      doc.line(iconX + 1.1, iconY + 1.4, iconX + 1.5, iconY + 2.3);
+      doc.line(iconX + 1.5, iconY + 2.3, iconX + 2.2, iconY + 3);
+      doc.line(iconX + 2.2, iconY + 3, iconX + 3.1, iconY + 3.4);
+      doc.line(iconX + 3.1, iconY + 3.4, iconX + 3.5, iconY + 3);
+      doc.line(iconX + 1.5, iconY + 2.3, iconX + 2, iconY + 1.9);
+      doc.line(iconX + 2.7, iconY + 2.7, iconX + 3.1, iconY + 2.3);
     }
     doc.textWithLink(
       business.phone,
-      205 - doc.getTextWidth(business.phone),
+      phoneTextX,
       287,
       {
         url: `tel:${business.phone.replace(/[^+0-9]/g, "")}`,

@@ -188,7 +188,7 @@ export default function ProformaInvoicePreview({
           <span>www.weboin.com</span>
         </a>
         <a href={`tel:${business.phone.replace(/[^+0-9]/g, "")}`}>
-          <Image src="/phone.png" width="20" height="20" alt="" />
+          <Image src="/phone.png" width="16" height="16" alt="" />
           <span>{business.phone}</span>
         </a>
       </footer>
