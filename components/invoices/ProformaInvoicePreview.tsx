@@ -188,20 +188,7 @@ export default function ProformaInvoicePreview({
           <span>www.weboin.com</span>
         </a>
         <a href={`tel:${business.phone.replace(/[^+0-9]/g, "")}`}>
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M8 6.5c-.7.1-1.2.8-1.2 1.5 0 4.7 3.5 8.5 8.3 9.2.8.1 1.5-.4 1.7-1.1l.4-1.5-3-1.5-1.3 1.3a9 9 0 0 1-3.4-3.4l1.3-1.3-1.5-3z" />
-          </svg>
+          <Image src="/phone.png" width="20" height="20" alt="" />
           <span>{business.phone}</span>
         </a>
       </footer>

@@ -23,6 +23,7 @@ export function createProformaPdf(
   business: Business,
   logo?: string,
   fonts?: { regular: string; bold: string },
+  phoneIcon?: string,
 ) {
   const { doc, fontFamily } = createPdfDocument(fonts);
   doc.setProperties({
@@ -64,15 +65,19 @@ export function createProformaPdf(
     doc.textWithLink("www.weboin.com", 18, 287, {
       url: "https://www.weboin.com",
     });
-    doc.circle(173, 286, 3.5);
-    // Phone handset inside the circular contact icon.
-    doc.line(171.5, 284, 171, 284.5);
-    doc.line(171, 284.5, 171.5, 286);
-    doc.line(171.5, 286, 173, 287.5);
-    doc.line(173, 287.5, 174.5, 288);
-    doc.line(174.5, 288, 175, 287.5);
-    doc.line(171.5, 286, 172.4, 285.4);
-    doc.line(173.6, 286.6, 174.5, 286);
+    if (phoneIcon) {
+      doc.addImage(phoneIcon, "PNG", 169.5, 282.5, 7, 7);
+    } else {
+      doc.circle(173, 286, 3.5);
+      // Phone handset inside the circular contact icon.
+      doc.line(171.5, 284, 171, 284.5);
+      doc.line(171, 284.5, 171.5, 286);
+      doc.line(171.5, 286, 173, 287.5);
+      doc.line(173, 287.5, 174.5, 288);
+      doc.line(174.5, 288, 175, 287.5);
+      doc.line(171.5, 286, 172.4, 285.4);
+      doc.line(173.6, 286.6, 174.5, 286);
+    }
     doc.textWithLink(
       business.phone,
       205 - doc.getTextWidth(business.phone),
@@ -340,8 +345,8 @@ export async function downloadProformaPdf(
   business: Business,
 ) {
   assertValidInvoice(invoice);
-  const { logo, fonts } = await loadPdfAssets();
+  const { logo, fonts, phoneIcon } = await loadPdfAssets();
   const filename = proformaFilename(invoice);
-  createProformaPdf(invoice, business, logo, fonts).save(filename);
+  createProformaPdf(invoice, business, logo, fonts, phoneIcon).save(filename);
   return filename;
 }

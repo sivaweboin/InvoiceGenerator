@@ -1,5 +1,6 @@
 export type PdfFonts = { regular: string; bold: string };
-let cached: Promise<{ logo: string; fonts: PdfFonts }> | undefined;
+let cached:
+  Promise<{ logo: string; phoneIcon: string; fonts: PdfFonts }> | undefined;
 async function base64Asset(path: string) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`Unable to load PDF asset: ${path}`);
@@ -14,9 +15,11 @@ export function loadPdfAssets() {
     base64Asset("/weboin-logo.png"),
     base64Asset("/fonts/calibri.ttf"),
     base64Asset("/fonts/calibri-bold.ttf"),
+    base64Asset("/phone.png"),
   ])
-    .then(([logo, regular, bold]) => ({
+    .then(([logo, regular, bold, phoneIcon]) => ({
       logo: `data:image/png;base64,${logo}`,
+      phoneIcon: `data:image/png;base64,${phoneIcon}`,
       fonts: { regular, bold },
     }))
     .catch((error) => {

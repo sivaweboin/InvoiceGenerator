@@ -2,6 +2,10 @@
 
 Create Tax and Proforma invoices, preview them, save an invoice library, and download named A4 PDFs. Proforma supports fixed-amount discounts per item, applied before tax. Tax and Proforma keep separate layouts and can use the same document number without overwriting each other.
 
+## Asset credits
+
+Phone icon by [Fathema Khanom](https://www.flaticon.com/authors/fathema-khanom) from [Flaticon](https://www.flaticon.com/).
+
 ## Development
 
 ```sh

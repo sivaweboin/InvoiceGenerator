@@ -52,6 +52,22 @@ test("short client names retain readable address and GST space on one PDF page",
   }
 });
 
+test("proforma PDF embeds the supplied phone icon", () => {
+  const phoneIcon =
+    "data:image/png;base64," +
+    fs.readFileSync("public/phone.png").toString("base64");
+  const doc = createProformaPdf(
+    fixture("proforma"),
+    business,
+    undefined,
+    undefined,
+    phoneIcon,
+  );
+  assert.equal(doc.getNumberOfPages(), 1);
+  assert.ok(Object.keys(doc.internal.collections.addImage_images).length > 0);
+  assert.ok(doc.output().includes("/Subtype /Image"));
+});
+
 test("PDF filenames distinguish type and sanitize unsafe customer/number characters", () => {
   const invoice = { ...fixture("tax"), customer: "A/B:*? Ltd" };
   const tax = taxInvoiceFilename(invoice);
